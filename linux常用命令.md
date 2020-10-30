@@ -1,0 +1,11 @@
+- 1.清空yum:yum clean all  
+- 2.重启服务：systemctl restart 服务名
+- 3.设置开机自启动：systemctl enable 服务名
+- 4.使配置文件生效：systemctl daemon-reload
+- 5.关闭防火墙：systemctl disable firewalld
+			   systemctl stop firewalld
+- 6.开启防火墙：systemctl start firewalld
+- 7.开端口：firewall-cmd --zone=public --add-port=8080/tcp --permanent
+- 8.提交端口修改：firewall-cmd --reload
+- 9.命令关机：poweroff
+- 10.命令重启：reboot 
