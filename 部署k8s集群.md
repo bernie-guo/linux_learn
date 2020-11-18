@@ -104,7 +104,7 @@
 				sudo systemctl daemon-reload
 				sudo systemctl restart docker
 		- 3.安装k8s
-			- 安装：yum install kubernetes
+			- 安装：yum install  吗  
 			
 			- 配置/etc/kubernetes/config文件
 			 	修改：KUBE_MASTER="--master=http://k8s-master:8080"
