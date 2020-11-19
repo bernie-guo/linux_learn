@@ -37,13 +37,14 @@
 ## 绘制流程图
 
 
-``` graph TD
+graph TD
     A[矩形图] -->B(圆角矩形图)
     B --> C{菱形图}
     C -->|关系one| D[Laptop]
     C -->|two| E[iPhone]
     C -->|three| F[Car]
-```
+
+
 ## 序列图
 
 ```
@@ -70,9 +71,9 @@ section 后期阶段
 ```
 ## 数学公式
 
-inline math: `$\dfrac{
+Inline math: $\dfrac{
 \tfrac{1}{2}[1-(\tfrac{1}{2})^n] }{
-1-\tfrac{1}{2} } = s_n$`.
+1-\tfrac{1}{2} } = s_n$.
 
 ## 代码引用
 `helloworld`
