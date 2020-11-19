@@ -36,8 +36,8 @@
 
 ## 绘制流程图
 
-```
-graph TD
+
+``` graph TD
     A[矩形图] -->B(圆角矩形图)
     B --> C{菱形图}
     C -->|关系one| D[Laptop]
@@ -45,12 +45,15 @@ graph TD
     C -->|three| F[Car]
 ```
 ## 序列图
+
 ```
+
 sequenceDiagram
     loop every day
         Alice->John: Hello John, how are you?
         John->Alice: Great!
     end
+
 ```
 
 ## 甘特图
