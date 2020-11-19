@@ -36,14 +36,17 @@
 
 ## 绘制流程图
 
+```flow
+st=>start: start:>http://www.baidu.com
+op1=>operation: 操作1
+cond1=>condition: YES or NO?
+sub=>subroutine: 子程序
+e=>end
 
-graph TD
-    A[矩形图] -->B(圆角矩形图)
-    B --> C{菱形图}
-    C -->|关系one| D[Laptop]
-    C -->|two| E[iPhone]
-    C -->|three| F[Car]
-
+st->op1->cond1
+cond1(yes)->e
+cond1(no)->sub(right)->op1  
+```
 
 ## 序列图
 
