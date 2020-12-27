@@ -9,3 +9,10 @@
 - 8.提交端口修改：firewall-cmd --reload
 - 9.命令关机：poweroff
 - 10.命令重启：reboot 
+- 11.安装vim编辑器：yum -y install vim*
+   - vim /etc/vimrc添加： 
+        set showmode    " 设置在命令行界面最下面显示当前模式等
+        set ruler       " 在右下角显示光标所在的行数等信息
+        set autoindent  " 设置每次单击Enter键后，光标移动到下一行时与上一行的起始字符对齐
+        syntax on       " 即设置语法检测，当编辑C或者Shell脚本时，关键字会用特殊颜色显示
+

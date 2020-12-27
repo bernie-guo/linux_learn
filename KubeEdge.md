@@ -266,7 +266,7 @@ NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
 kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   12h
 注意： 只有网络插件也安装配置完成之后，node才能会显示为ready状态。
 ```
- 
+
 - 8、K8s安装dashboard（可选）
 
 ### KubeEdge的安装与配置
@@ -280,9 +280,10 @@ cloud端负责编译KubeEdge的相关组件与运行cloudcore。
 [root@ke-cloud ~]# wget https://golang.google.cn/dl/go1.14.4.linux-amd64.tar.gz
 [root@ke-cloud ~]# tar -zxvf go1.14.4.linux-amd64.tar.gz -C /usr/local
 ```
-2）配置golang环境
+​		2）配置golang环境
 `[root@ke-cloud ~]# vim /etc/profile`
 文件末尾添加：
+
 ```
 # golang env
 export GOROOT=/usr/local/go
@@ -294,7 +295,7 @@ export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 [root@ke-cloud ~]# mkdir -p /data/gopath && cd /data/gopath
 [root@ke-cloud ~]# mkdir -p src pkg bin
 ```
-3）下载KubeEdge源码
+​	3）下载KubeEdge源码
 `[root@ke-cloud ~]# git clone https://github.com/kubeedge/kubeedge $GOPATH/src/github.com/kubeedge/kubeedge`
 
 - 部署cloudcore
@@ -302,6 +303,7 @@ export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
 本文选用了在操作上更简单的keadm部署方式。
 1）编译kubeadm
+
 ```
 [root@ke-cloud ~]# cd $GOPATH/src/github.com/kubeedge/kubeedge
 [root@ke-cloud ~]# make all WHAT=keadm
@@ -309,6 +311,7 @@ export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 说明：编译后的二进制文件在./_output/local/bin下，单独编译cloudcore与edgecore的方式如下：
 `[root@ke-cloud ~]# make all WHAT=cloudcore && make all WHAT=edgecore`
 2）创建cloud节点
+
 ```
 [root@ke-cloud ~]# keadm init --advertise-address="192.168.1.66"
 
@@ -525,3 +528,398 @@ kubeedge-pi-counter-c69698d6-rb4xz      1/1     Running   0          2m      192
 首先在云端使用了kubeadm轻松搭建了一个K8s集群。
 然后使用了非常方便、易用的keadm在云端和边缘端搭建了KubeEdge的核心组件：cloudcore和edgecore。部署成功后，KubeEdge边缘节点会作为一个node被K8s管控。
 最后用了KubeEdge官方提供的examples（kubeedge-counter-demo）运行了一个示例，这一示例完美地展现了kubeEdge的边缘设备管理、边云协同能力。
+
+
+
+cp $GOPATH/src/github.com/kubeedge/kubeedge/build/crds/devices/* $GOPATH/yamls
+
+cp $GOPATH/src/github.com/kubeedge/kubeedge/build/node.json $GOPATH/cloud
+
+
+
+
+
+ssh 192.168.117.145 "mkdir -p /etc/kubeedge /home/kkbill/kubeedge/edge"
+
+scp -r $GOPATH/certs/* 192.168.117.145:/etc/kubeedge
+
+
+
+scp -r $GOPATH/edge/* 192.168.117.145:/home/kkbill/kubeedge/edge
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 1. 概述
+
+**1.1 环境**
+
+- 云端：centos7，用户名为k8smaster。ip 为 192.168.179.131 
+- 边缘端：Ubuntu 18.04.3 LTS，用户名为k8slave1。ip 为 192.168.179.142
+- KubeEdge 部署需要的组件：（注意，**本安装教程假定你已经在云端机器上安装好了k8s集群和docker，并在边缘端机器上安装好了docker**）
+- 云端：docker， kubernetes 集群和 KubeEdge 云端核心模块。
+- 边缘端：docker， mqtt 和 KubeEdge 边缘端核心模块。
+
+**1.2 依赖**
+
+- golang：版本1.12.14，移步 https://studygolang.com/dl 下载（由于是源码编译，所以需要用到golang）
+- k8s版本：v1.16.0
+- mosquitto：直接通过apt-get安装
+- KubeEdge：v1.1.0
+
+
+
+## 2. 准备
+
+
+
+### **2.1 创建部署文件目录**
+
+本安装方法主要适用于初学者，因为初学者对于搭建集群往往是比较陌生的。本文会先创建一个目录，存放各类安装过程中需要的文件。
+
+创建部署工程目录：
+
+```
+# mkdir /home/kkbill/kubeedge
+```
+
+创建子目录： 
+
+```
+# cd /home/kkbill/kubeedge
+
+# mkdir cloud edge certs yamls src
+```
+
+- 说明：
+
+  - cloud：云端相关文件，包括 cloudcore 和配置文件。
+  - edge：边缘端相关文件，包括 edgecore 和配置文件。
+  - certs：证书文件。
+  - yamls：一些 yamls 文件。
+  - src：源码目录，存放kubeedge源码。
+
+- 
+
+  ### **2.2 KubeEdge 二进制**
+
+获取KubeEdge的方式有两种，一种是直接从 官网(https://github.com/kubeedge/kubeedge/releases) 中下载（本实验版本为kubeedge-v1.1.0-linux-amd64.tar.gz）；另一种方法是通过源码编译得到。这里介绍一下源码编译的方法（嗯，折腾...）
+
+**2.2.1 Golang环境搭建**
+
+(1) 下载golang，并解压
+
+```
+# wget https://studygolang.com/dl/golang/go1.12.14.linux-amd64.tar.gz
+
+# tar -C /usr/local -xzf  go1.12.14.linux-amd64.tar.gz
+```
+
+(2) 添加环境变量
+
+在~/.bashrc文件末尾添加：
+
+```
+# vim ~/.bashrc
+
+export GOPATH=/home/kkbill/kubeedge
+export PATH=$PATH:/usr/local/go/bin
+```
+
+保存后记得执行 source ~/.bashrc 生效。验证：
+
+```
+# go version
+# go version go1.12.14 linux/amd64
+```
+
+**2.2.2 下载kubeedge源码**
+
+```
+# git clone https://github.com/kubeedge/kubeedge.git $GOPATH/src/github.com/kubeedge/kubeedge
+```
+
+**2.2.3 检测gcc是否安装**
+
+```
+# gcc --version
+```
+
+如果没有，则自行安装。
+
+**2.2.4 编译云端**
+
+```
+# cd $GOPATH/src/github.com/kubeedge/kubeedge/
+
+# make all WHAT=cloudcore
+```
+
+生成二进制 cloudcore 文件位于 cloud 目录。拷贝 cloudcore 和同一目录的配置文件（conf目录）到部署工程目录：
+
+```
+# cp -a cloud/cloudcore $GOPATH/cloud/
+# cp -a cloud/conf/ $GOPATH/cloud/
+```
+
+在编译的时候遇到了第一个坑，就是版本的问题。由于最新clone下来的版本已经不是v1.1.0了，所以，我们需要把代码切回到v1.1.0版本，操作如下：（如果你在这一步无异常，则跳过）
+
+在 $GOPATH/src/github.com/kubeedge/kubeedge 目录下，执行 git tag，并选择 v1.1.0 即可
+
+```
+# git tag
+...
+v1.1.0
+...
+
+# git checkout v1.1.0 
+```
+
+执行完这一句后，代码就会回到v1.1.0版。
+
+**2.2.5 编译边缘端**
+
+```
+# cd $GOPATH/src/github.com/kubeedge/kubeedge/
+
+# make all WHAT=edgecore
+```
+
+生成二进制 edgecore 文件位于 edge 目录。拷贝二进制及配置文件到部署工程目录：
+
+```
+# cp -a edge/edgecore $GOPATH/edge/
+
+# cp -a edge/conf/ $GOPATH/edge/
+```
+
+这里又遇到了第2个坑，即出现如下错误：
+
+```
+/usr/local/go/pkg/tool/linux_amd64/link: signal: killed
+```
+
+这是由于编译需要较大的内存，而内存不够，造成了OOM。对应的解决办法：增加内存
+
+(1) 创建要作为swap分区的文件:增加1GB大小的交换分区，则命令写法如下，其中的count等于想要的块的数量（bs*count=文件大小）。
+
+```
+# dd if=/dev/zero of=/root/swapfile bs=1M count=1024
+```
+
+(2) 格式化为交换分区文件:
+
+```
+mkswap /root/swapfile #建立swap的文件系统
+```
+
+(3) 启用交换分区文件:
+
+```
+swapon /root/swapfile #启用swap文件
+```
+
+解决这个问题，参考了：
+
+```
+https://forum.golangbridge.org/t/go-build-exits-with-signal-killed/513
+
+https://segmentfault.com/a/1190000012219689
+
+https://www.cnblogs.com/spjy/p/7085389.html
+```
+
+
+
+### **2.3 生成证书**
+
+```
+# $GOPATH/src/github.com/kubeedge/kubeedge/build/tools/certgen.sh genCertAndKey edge
+
+# cp -a /etc/kubeedge/* $GOPATH/certs
+```
+
+生成的 ca 和 certs 分别位于 /etc/kubeedge/ca 和 /etc/kubeedge/certs 目录，将其拷贝到部署工程目录的 certs 目录。注意，这是在云端机器执行，所以云端已经有了证书，拷贝到 certs 目录，是为了方便分发到边缘节点。
+
+
+
+### **2.4 拷贝设备模块和设备CRD yaml 文件**
+
+```
+# cp 𝐺𝑂𝑃𝐴𝑇𝐻/𝑠𝑟𝑐/𝑔𝑖𝑡ℎ𝑢𝑏.𝑐𝑜𝑚/𝑘𝑢𝑏𝑒𝑒𝑑𝑔𝑒/𝑘𝑢𝑏𝑒𝑒𝑑𝑔𝑒/𝑏𝑢𝑖𝑙𝑑/𝑐𝑟𝑑𝑠/𝑑𝑒𝑣𝑖𝑐𝑒𝑠/∗
+
+GOPATH/yamls
+```
+
+
+
+### **2.5 拷贝node.json**
+
+```
+# cp 𝐺𝑂𝑃𝐴𝑇𝐻/𝑠𝑟𝑐/𝑔𝑖𝑡ℎ𝑢𝑏.𝑐𝑜𝑚/𝑘𝑢𝑏𝑒𝑒𝑑𝑔𝑒/𝑘𝑢𝑏𝑒𝑒𝑑𝑔𝑒/𝑏𝑢𝑖𝑙𝑑/𝑛𝑜𝑑𝑒.𝑗𝑠𝑜𝑛
+
+GOPATH/cloud 
+```
+
+释义：node.json 为节点的配置信息，需要在云端机器执行，作用是将边缘端加入集群（但实际上只是让 k8s 知道有这个节点，还不是真正意义上的加入）
+
+
+
+### **2.6 配置云端节点**
+
+打开配置文件 $GOPATH/cloud/conf/controller.yaml ，修改两处 master 的值，将master修改为 k8s 的apiserver的地址，在我的配置中，修改为：https://192.168.179.131:6443
+
+这个地址当然就是云端这台机器的ip，那么端口是怎么来的？你可以从 /etc/kubernetes/manifests/kube-apiserver.yaml 中找到答案，如下图所示：
+
+（当然，这里的前提是你已经装好了kubernetes，但是安装 kubernetes 不在本教程范围。）
+
+ ![img](https://img2020.cnblogs.com/blog/1442950/202003/1442950-20200330213223439-1561103334.png)
+
+ 这里提醒一下，我在第一次安装的时候，由于自身对k8s也还非常的不了解，还不知道是查看kube-apiserver.yaml，所以错写成了http，这个错误让我废了很长的时间才解决。
+
+另外，还需要将kubeconfig的值修改为：/root/.kube/config
+
+![img](https://img2020.cnblogs.com/blog/1442950/202003/1442950-20200330214208350-1616304629.png)
+
+ 这一步也存在一个坑，如果设置不正确，可能会导致 cloudcore 启动失败，出现如下错误：
+
+E0102 17:53:58.630318 15021 reflector.go:125] github.com/kubeedge/kubeedge/cloud/pkg/devicecontroller/manager/device.go:40: Failed to list *v1alpha1.Device: the server rejected our request for an unknown reason (get devices.devices.kubeedge.io)
+E0102 17:53:58.630335 15021 reflector.go:125] github.com/kubeedge/kubeedge/cloud/pkg/devicecontroller/manager/devicemodel.go:40: Failed to list *v1alpha1.DeviceModel: the server rejected our request for an unknown reason (get devicemodels.devices.kubeedge.io)
+W0102 17:53:58.632435 15021 controller.go:51] new downstream controller failed with error: the server rejected our request for an unknown reason (get nodes)
+
+这一问题在 https://github.com/kubeedge/kubeedge/issues/1361 有讨论，我也是从这个issue中摸索出了自己的解决方案。
+
+
+
+### **2.7 配置边缘节点**
+
+打开配置文件$GOPATH/edge/conf/edge.yaml ，将如下两处ip换成你自己的云端主机的ip。
+
+![img](https://img2020.cnblogs.com/blog/1442950/202003/1442950-20200330215031057-2107395820.png)
+
+ 另外，由于在v1.1.0版本中，边缘节点名称为 `fb4ebb70-2783-42b8-b3ef-63e2fd6d242e，这不方便阅读，我们将其修改为edge-node。在edge.yaml文件中把所有 fb4ebb70-2783-42b8-b3ef-63e2fd6d242e 的值替换为 edge-node。`
+
+此外，还有非常重要的一点是，注意该文件中 cgroup-driver 字段的值，默认情况下是 cgroupfs，有些文章不说明具体原因就让你将其修改为 sysemd，这是不负责的。**这里是否需要修改该字段的值取决于你安装的docker的cgroup-driver是什么，原则就是要保持两者一直**，若不一致，就会出现致命的问题。
+
+可以通过 docker info 命令查看已安装的docker的cgroup-driver，确定好后，再决定是否修改edge.yaml 文件中cgroup-driver的值。
+
+这里我也踩过坑，第一次安装时未经检查，就盲目修改了该字段的值，导致最后边缘节点的状态始终是NotReady，这个问题在issue列表中也有讨论，详见 https://github.com/kubeedge/kubeedge/issues/1243 。
+
+
+
+### **2.8 安装mqtt**
+
+mqtt只需要在边缘端安装。由于我使用的是ubuntu系统，直接使用apt-get，如下：
+
+\# add-apt-repository ppa:mosquitto-dev/mosquitto-ppa // 添加源
+\# apt-get update // 更新
+\# apt-get install mosquitto // 安装
+
+
+
+## **3. 部署**
+
+前面已经准备好了所需要的配置文件，现在，只需要将证书和边缘端的文件拷贝到边缘机器上，使用 scp 命令进行拷贝。（当然，你也可以在边缘机器上完成上面的2.7节。）
+
+在云端主机上进行操作，192.168.179.142是边缘端的ip。
+
+```
+# ssh 192.168.179.142 "mkdir -p /etc/kubeedge /home/kkbill/kubeedge/edge"
+# scp -r GOPATH/certs/* 192.168.179.142:/etc/kubeedge # scp -r
+
+GOPATH/edge/* 192.168.179.142:/home/kkbill/kubeedge/edge
+```
+
+这里可能会涉及到一些permission deny的问题，这是由于 scp 命令造成的，这个问题不难，自己解决一下。
+
+
+
+### **3.1 云端**
+
+首先进入部署工程目录：cd /home/kkbill/kubeedge
+
+**3.1.1 添加边缘端到集群**
+
+```
+# kubectl apply -f cloud/node.json
+```
+
+**注意**：在执行该命令前，务必修改node.json文件的值，如下，把name字段的值由 fb4ebb70-2783-42b8-b3ef-63e2fd6d242e 的值替换为 edge-node。
+
+![img](https://img2020.cnblogs.com/blog/1442950/202003/1442950-20200330224140558-2135133133.png)
+
+ 此时，查看节点状态，边缘端未就绪。如下：
+
+```
+# kubectl get nodes 
+
+NAME        STATUS      ROLES   AGE     VERSION
+edge-node NotReady    edge       9s
+k8smaster  Ready          master    15h       v1.16.0
+```
+
+**3.1.2 创建设备模块和设备CRD**
+
+```
+# kubectl apply -f yamls
+```
+
+ 注意，yamls 目录有2个 yaml 文件，此处指定目录，会自动执行目录所有文件。
+
+**3.1.3 运行cloudcore**
+
+```
+# cd  cloud
+
+# ./cloudcore
+```
+
+可能会出现如下错误：
+
+```
+github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/manager/secret.go:31: Failed to list *v1.Secret: Get https://192.168.179.131:6443/api/v1/secrets?limit=500&resourceVersion=0: x509: certificate signed by unknown authority (possibly because of "crypto/rsa: verification error" while trying to verify candidate authority certificate "kubernetes")
+```
+
+参考这里的讨论 https://github.com/kubernetes/kubernetes/issues/48378 ，我忘了当时是怎么解决这个问题的了...
+
+
+
+### **3.2 边缘端**
+
+该部分在边缘端机器上进行。
+
+首先，在边缘端运行mqtt：
+
+```
+# mosquitto -d -p 1883
+```
+
+然后进入部署工程目录：cd /home/kkbill/kubeedge/edge，并运行 edgecore：
+
+```
+# ./edgecore
+```
+
+
+
+### **3.3 验证**
+
+在云端查看状态：
+
+```
+# kubectl get nodes
+NAME        STATUS     ROLES    AGE    VERSION
+edge-node   Ready         edge        8h       v1.15.3-kubeedge-v1.1.0
+k8smaster    Ready        master     173d   v1.16.0
+```
+
+这个时候，edge-node 的状态就变成了 Ready。到这里，基本上算是搭建完成了。

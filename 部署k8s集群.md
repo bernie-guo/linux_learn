@@ -22,15 +22,24 @@
 - 1.设置master节点和node节点的主机名
 	master执行：hostnamectl --static set-hostname  k8s-master
 	node执行：hostnamectl --static set-hostname  k8s-node-1
-	重启生效：reboot
+	
+	edge执行：hostnamectl --static set-hostname  k8s-edge-1
+	
+- 重启生效：reboot
+	
 - 2.修改master和node上的hosts
 	在master和slave的/etc/hosts文件中均加入以下内容：
+	
 	```
-	127.0.0.1   		k8s-master
-	127.0.0.1  			etcd
-	127.0.0.1  			registry
-	192.168.117.136  	k8s-node-1
+	cat > /etc/hosts << EOF
+	192.168.117.139   		k8s-master
+	192.168.117.139  			etcd
+	192.168.117.139  			registry
+	192.168.117.142  	vimk8s-node-1
+	192.168.117.146     k8s-edge-1
+	EOF
 	```
+	
 - 3.关闭master和slave上的防火墙
 	systemctl disable firewalld.service
 	systemctl stop firewalld.service
@@ -40,7 +49,7 @@
 	- 安装命令：yum install etcd -y
 	- 编辑etcd的默认配置文件/etc/etcd/etcd.conf
 		修改：
-		ETCD_LISTEN_CLIENT_URLS="http://本机地址：2379,http://127.0.0.1：2379"
+		ETCD_LISTEN_CLIENT_URLS="http://本机地址:2379,http://127.0.0.1:2379"
 		ETCD_ADVERTISE_CLIENT_URLS="http://etcd:2379"
 	- 启动etcd并设置开机自启动
 		systemctl start etcd 
@@ -49,11 +58,14 @@
 		etcdctl -C http://etcd:2379 cluster-health
 - 2.安装flannel
 	- 安装命令：yum install flannel
-	- 配置flannel：
+	- 配置flannel：/etc/sysconfig/flanneld
+	  修改：FLANNEL_ETCD_ENDPOINTS="http://etcd:2379"
+	- 配置etcd中关于flannel的key：etcdctl mk /atomic.io/network/config '{ "Network": "10.0.0.0/16" }'
 	- 启动并设置开机自启动
 		systemctl start flanneld.service
 		systemctl enable flanneld.service
 - 3.安装docker
+	
 	- 安装命令：yum install docker -y
 	- 开启docker服务：service docker start
 	- 设置docker开启自启动：chkconfig docker on
@@ -95,6 +107,7 @@
 		systemctl start flanneld.service
 		systemctl enable flanneld.service
 - 2.安装docker
+	
 	- 安装命令：yum install docker -y
 	- 开启docker服务：service docker start
 	- 设置docker开启自启动：chkconfig docker on
@@ -110,7 +123,8 @@
 				sudo systemctl restart docker
 	```
 - 3.安装k8s
-	- 安装：yum install  吗  
+	
+	- 安装：yum install   kubernetes  
 		
 	- 配置/etc/kubernetes/config文件
 		修改：KUBE_MASTER="--master=http://k8s-master:8080"
