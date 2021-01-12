@@ -51,6 +51,7 @@
 		修改：
 		ETCD_LISTEN_CLIENT_URLS="http://本机地址:2379,http://127.0.0.1:2379"
 		ETCD_ADVERTISE_CLIENT_URLS="http://etcd:2379"
+	- 设置etcdctl版本为2：export ETCDCTL_API=2
 	- 启动etcd并设置开机自启动
 		systemctl start etcd 
 		systemctl enable etcd
