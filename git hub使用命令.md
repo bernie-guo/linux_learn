@@ -1,7 +1,0 @@
-- 1.在当前目录下从git下载：git clone https://github.com/bernie-guo/learn.git
-- 2.上传本目录：git add .
-- 3.git congig --global user.email "1456252990@qq.com"
-- 4.git congig --global user.name "bernie-guo"
-- 5.提交上传：git commit -m 2020.10.27
-- 6.推送git push 
-- 7.拉去git pull
